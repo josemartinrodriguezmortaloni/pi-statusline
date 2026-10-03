@@ -53,7 +53,7 @@ export const usage = defineSegment({
     provider: Type.String({
       default: "active",
       description:
-        '"active" follows the provider of the model in use; or a fixed provider id: anthropic, claude-acp.',
+        '"active" follows the provider of the model in use; or a fixed provider id: anthropic, claude-acp, openai-codex.',
     }),
     window: Type.Enum(["5h", "7d", "extra"], { default: "5h", description: "Quota window to show." }),
     thresholds: Type.Object(
