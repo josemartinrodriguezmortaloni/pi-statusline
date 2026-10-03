@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { statuslineCommand, USAGE } from "./agent/index.ts";
 import {
   type ConfigStore,
   configPath,
@@ -10,7 +11,7 @@ import {
 } from "./config/index.ts";
 import { createHost, type Host } from "./host/index.ts";
 import { createAdapters, createQuotaMonitor, type QuotaMonitor } from "./quota/index.ts";
-import { createFooter } from "./statusline/index.ts";
+import { createFooter, footerSwitch } from "./statusline/index.ts";
 
 /** What the extension reads from outside pi. Tests inject each one. */
 export interface StatuslineDeps {
@@ -50,13 +51,15 @@ function startSession(pi: ExtensionAPI, deps: StatuslineDeps, ctx: ExtensionCont
     autoCompact: () => pi.getSettings().compaction?.enabled ?? true,
     quota: quota.get,
   });
-  ctx.ui.setFooter((tui, theme, footerData) =>
+  const show = footerSwitch(ctx.ui, (tui, theme, footerData) =>
     createFooter(tui, theme, footerData, {
       snapshot: host.snapshot,
       layout: store.current,
       changes: [store.onChange, quota.onUpdate],
     }),
   );
+  show(store.current().enabled);
+  store.onChange((config) => show(config.enabled));
   return { store, host, quota, syncQuota };
 }
 
@@ -77,6 +80,13 @@ export function registerStatusline(pi: ExtensionAPI, deps: StatuslineDeps): void
     session = undefined;
   });
   pi.on("model_select", (_event, ctx) => session?.syncQuota(ctx));
+  pi.registerCommand(
+    "statusline",
+    statuslineCommand(
+      () => session?.store,
+      (_description, ctx) => ctx.ui.notify(USAGE, "info"),
+    ),
+  );
   pi.on("agent_start", () => session?.host.turnStarted());
   pi.on("agent_end", () => session?.host.turnEnded());
 }

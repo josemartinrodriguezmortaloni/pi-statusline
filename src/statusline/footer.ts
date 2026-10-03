@@ -50,3 +50,22 @@ export function createFooter(
     },
   };
 }
+
+export type FooterFactory = (
+  tui: { requestRender(): void },
+  theme: Painter,
+  footerData: ReadonlyFooterDataProvider,
+) => Component & { dispose(): void };
+
+/** Shows the statusline while enabled and the default pi footer otherwise. Mounts only on a change. */
+export function footerSwitch(
+  ui: { setFooter(factory: FooterFactory | undefined): void },
+  factory: FooterFactory,
+): (enabled: boolean) => void {
+  let shown: boolean | undefined;
+  return (enabled) => {
+    if (enabled === shown) return;
+    shown = enabled;
+    ui.setFooter(enabled ? factory : undefined);
+  };
+}
