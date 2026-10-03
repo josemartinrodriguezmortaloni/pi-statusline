@@ -79,3 +79,33 @@ describe("segment color", () => {
     expect(await colored("#ff8800")).toEqual(["\x1b[38;2;255;136;0m~/proj\x1b[39m"]);
   });
 });
+
+describe("context bar", () => {
+  const contextLine = async (contextUsage: {
+    tokens: number | null;
+    contextWindow: number;
+    percent: number | null;
+  }) => {
+    const home = tempHome();
+    writeConfig(home, { lines: [{ left: [{ segment: "context", bar: true }] }] });
+    return (await boot({ home, contextUsage })).mount(taggedTheme).render(80);
+  };
+
+  it("shows a bar, the used tokens and the tokens left", async () => {
+    expect(await contextLine({ tokens: 24_600, contextWindow: 200_000, percent: 12.3 })).toEqual([
+      "●○○○○○○○ 12.3% · 25k used · 175k left (auto)",
+    ]);
+  });
+
+  it("keeps the warning tone above 70 %", async () => {
+    expect(await contextLine({ tokens: 150_000, contextWindow: 200_000, percent: 75 })).toEqual([
+      "<warning>●●●●●●○○ 75.0% · 150k used · 50k left (auto)</warning>",
+    ]);
+  });
+
+  it("falls back to the plain text while the used tokens are unknown", async () => {
+    expect(await contextLine({ tokens: null, contextWindow: 200_000, percent: null })).toEqual([
+      "?/200k (auto)",
+    ]);
+  });
+});

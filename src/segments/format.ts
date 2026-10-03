@@ -17,6 +17,14 @@ export function formatTokens(count: number): string {
   return scale.format(count);
 }
 
+const METER_WIDTH = 8;
+
+/** An 8-dot bar of a percent, clamped to 0..100. */
+export function meter(percent: number): string {
+  const filled = Math.round((Math.min(100, Math.max(0, percent)) / 100) * METER_WIDTH);
+  return "●".repeat(filled) + "○".repeat(METER_WIDTH - filled);
+}
+
 /** Removes line breaks and tabs, so an extension status stays on one line. */
 export function singleLine(text: string): string {
   return text

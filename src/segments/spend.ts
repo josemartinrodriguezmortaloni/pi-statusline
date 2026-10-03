@@ -1,6 +1,7 @@
 import type { ContextUsage } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import type { Tokens } from "../host/index.ts";
-import { formatTokens, joinParts } from "./format.ts";
+import { formatTokens, joinParts, meter } from "./format.ts";
 import { defineSegment, type Tone } from "./segment.ts";
 
 const fragment = (text: string | false | undefined) => (text ? { text } : undefined);
@@ -54,15 +55,37 @@ function contextTone(percent: number): Tone | undefined {
   return percent > 70 ? "warning" : undefined;
 }
 
-function contextText(context: ContextUsage, autoCompact: boolean): string {
+const autoText = (autoCompact: boolean) => (autoCompact ? " (auto)" : "");
+
+function percentText(context: ContextUsage): string {
   const used = context.percent === null ? "?" : `${context.percent.toFixed(1)}%`;
-  return `${used}/${formatTokens(context.contextWindow)}${autoCompact ? " (auto)" : ""}`;
+  return `${used}/${formatTokens(context.contextWindow)}`;
 }
+
+/** The bar needs the used tokens; right after a compaction pi does not know them yet. */
+function barText(context: ContextUsage): string {
+  if (context.tokens === null || context.percent === null) return percentText(context);
+  const left = Math.max(0, context.contextWindow - context.tokens);
+  const used = `${context.percent.toFixed(1)}% · ${formatTokens(context.tokens)} used`;
+  return `${meter(context.percent)} ${used} · ${formatTokens(left)} left`;
+}
+
+const contextText = (context: ContextUsage, bar: boolean) => (bar ? barText(context) : percentText(context));
 
 export const context = defineSegment({
   id: "context",
   summary: "Used share of the context window, with (auto) when auto-compaction is on. Warns above 70 %.",
-  options: {},
-  render: ({ context, autoCompact }) =>
-    context && { text: contextText(context, autoCompact), tone: contextTone(context.percent ?? 0) },
+  options: {
+    bar: Type.Boolean({
+      default: false,
+      description: "Show a bar, the percent, the used tokens and the tokens left instead of percent/window.",
+    }),
+  },
+  render: ({ context, autoCompact }, { bar }) => {
+    if (!context) return undefined;
+    return {
+      text: contextText(context, bar) + autoText(autoCompact),
+      tone: contextTone(context.percent ?? 0),
+    };
+  },
 });

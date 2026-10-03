@@ -1,18 +1,12 @@
 import { Type } from "typebox";
 import type { Snapshot } from "../host/index.ts";
 import type { QuotaWindow } from "../quota/index.ts";
+import { meter } from "./format.ts";
 import { defineSegment, type Tone } from "./segment.ts";
-
-const BAR_WIDTH = 8;
 
 interface Thresholds {
   warning: number;
   error: number;
-}
-
-function bar(percent: number): string {
-  const filled = Math.round((Math.min(100, Math.max(0, percent)) / 100) * BAR_WIDTH);
-  return "●".repeat(filled) + "○".repeat(BAR_WIDTH - filled);
 }
 
 function tone(percent: number, thresholds: Thresholds): Tone | undefined {
@@ -67,7 +61,7 @@ export const usage = defineSegment({
   render: (snapshot, options) => {
     const window = quotaWindow(snapshot, options.provider, options.window as QuotaWindow["id"]);
     if (!window) return undefined;
-    const text = `${window.id} ${bar(window.usedPercent)} ${detail(window)}`;
+    const text = `${window.id} ${meter(window.usedPercent)} ${detail(window)}`;
     return { text, tone: tone(window.usedPercent, options.thresholds) };
   },
 });

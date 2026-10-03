@@ -74,7 +74,7 @@ The config is global: `~/.pi/agent/statusline.json`. Pi applies a saved edit at 
 | Segment | Shows |
 | --- | --- |
 | `cwd`, `git-branch`, `session-name` | Working directory, branch and session name. |
-| `tokens`, `cache`, `cost`, `context` | Session tokens, prompt cache, cost and context window use. |
+| `tokens`, `cache`, `cost`, `context { bar }` | Session tokens, prompt cache, cost and context window use; `bar` adds a bar with the used and the remaining tokens. |
 | `model`, `thinking` | Provider and model, and the thinking level. |
 | `session-time`, `turn-time` | Time since the session started, and the duration of the current or last agent turn. |
 | `status { key }`, `statuses { exclude }` | The status of one extension, and the statuses not shown by `status` and not in `exclude`. |
