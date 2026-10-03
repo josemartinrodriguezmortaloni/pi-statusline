@@ -4,6 +4,14 @@
  */
 export { PRESET } from "./preset.ts";
 export { quotaProviders } from "./quota.ts";
-export { describeIssues, type Issue, type Result } from "./schema.ts";
+export {
+  COLOR_TOKENS,
+  COMMON_OPTIONS,
+  describeIssues,
+  type Issue,
+  type Result,
+  SEGMENT_DOCS,
+  type SegmentDoc,
+} from "./schema.ts";
 export { type ChangeListener, type ConfigStore, configPath, openConfigStore } from "./store.ts";
 export type { Config, LineConfig, SegmentConfig } from "./types.ts";

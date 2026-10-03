@@ -1,5 +1,11 @@
-import type { ExtensionCommandContext, RegisteredCommand } from "@earendil-works/pi-coding-agent";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+  RegisteredCommand,
+} from "@earendil-works/pi-coding-agent";
 import { type Config, type ConfigStore, describeIssues, PRESET, type Result } from "../config/index.ts";
+import { designPrompt } from "./prompt.ts";
+import type { ApplyTarget } from "./tool.ts";
 
 interface Subcommand {
   description: string;
@@ -39,17 +45,26 @@ function runSubcommand(sub: Subcommand, store: ConfigStore, ctx: ExtensionComman
   else ctx.ui.notify(`statusline: ${describeIssues(result.issues)}`, "error");
 }
 
-export type Describe = (description: string, ctx: ExtensionCommandContext) => void;
+/** Sends the design request as a user turn; while the agent works, it waits as a follow-up. */
+function requestDesign(
+  pi: ExtensionAPI,
+  description: string,
+  target: ApplyTarget,
+  ctx: ExtensionCommandContext,
+) {
+  const prompt = designPrompt({ description, path: target.path, current: target.store.current() });
+  pi.sendUserMessage(prompt, ctx.isIdle() ? undefined : { deliverAs: "followUp" });
+}
 
-/** `/statusline`: the subcommands act on the config; any other text goes to `describe`. */
+/** `/statusline`: the subcommands act on the config; any other text asks the agent for a design. */
 export function statuslineCommand(
-  store: () => ConfigStore | undefined,
-  describe: Describe,
+  pi: ExtensionAPI,
+  target: () => ApplyTarget | undefined,
 ): Omit<RegisteredCommand, "name" | "sourceInfo"> {
-  const route = (args: string, ctx: ExtensionCommandContext, current: ConfigStore) => {
+  const route = (args: string, ctx: ExtensionCommandContext, current: ApplyTarget) => {
     const sub = SUBCOMMANDS[args];
-    if (sub) runSubcommand(sub, current, ctx);
-    else describe(args, ctx);
+    if (sub) runSubcommand(sub, current.store, ctx);
+    else requestDesign(pi, args, current, ctx);
   };
   return {
     description: "Design the statusline with the agent, or turn it on, off or back to the preset",
@@ -59,7 +74,7 @@ export function statuslineCommand(
         .map(([name, sub]) => ({ value: name, label: name, description: sub.description })),
     handler: async (raw, ctx) => {
       const args = raw.trim();
-      const current = store();
+      const current = target();
       if (!args || !current) return ctx.ui.notify(USAGE, "info");
       route(args, ctx, current);
     },

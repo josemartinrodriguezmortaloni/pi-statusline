@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { type ApplyTarget, applyTool, statuslineCommand, USAGE } from "./agent/index.ts";
+import { type ApplyTarget, applyTool, statuslineCommand } from "./agent/index.ts";
 import {
   type Config,
   type ConfigStore,
@@ -116,10 +116,7 @@ export function registerStatusline(pi: ExtensionAPI, deps: StatuslineDeps): void
   pi.on("model_select", (_event, ctx) => session?.syncQuota(ctx));
   pi.registerCommand(
     "statusline",
-    statuslineCommand(
-      () => session?.store,
-      (_description, ctx) => ctx.ui.notify(USAGE, "info"),
-    ),
+    statuslineCommand(pi, () => session?.apply),
   );
   pi.registerTool(applyTool(() => session?.apply));
   pi.on("agent_start", () => session?.host.turnStarted());

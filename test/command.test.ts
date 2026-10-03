@@ -66,3 +66,47 @@ describe("/statusline subcommands", () => {
     expect(await complete("o")).toEqual(["on", "off"]);
   });
 });
+
+describe("/statusline <description>", () => {
+  it("sends the design request with the catalog, the config path, the current config and the description", async () => {
+    const home = tempHome();
+    writeConfig(home, { lines: [{ left: [{ segment: "cwd", color: "accent" }] }] });
+    const booted = await boot({ home });
+    await run(booted, "model on the right, quota on the left");
+    expect(booted.sent).toHaveLength(1);
+    const prompt = booted.sent[0] ?? "";
+    expect(prompt).toContain("> model on the right, quota on the left");
+    expect(prompt).toContain("`statusline_apply`");
+    expect(prompt).toContain(join(home, ".pi", "agent", "statusline.json"));
+    expect(prompt).toContain('"segment": "cwd",\n          "color": "accent"');
+    expect(prompt).toMatch(
+      /- `usage`: Subscription quota.+\n {2}options: \{"provider":\{.*"default":"active"/,
+    );
+    expect(prompt).toMatch(/- `status`: .+\n {2}options: \{"key":\{"type":"string"/);
+    expect(prompt).toMatch(/- `cwd`: .+\n {2}options: none/);
+    expect(prompt).toContain("- `priority` (every segment): Segments with a lower priority hide first");
+  });
+
+  it("lists every segment that the config schema accepts", async () => {
+    const home = tempHome();
+    writeConfig(home, { lines: [{ left: [{ segment: "?" }] }] });
+    const booted = await boot({ home });
+    const accepted = booted.notified[0]?.message.match(/must be one of: (.+)/)?.[1]?.split(", ") ?? [];
+    await run(booted, "anything");
+    expect(accepted.length).toBeGreaterThan(10);
+    for (const id of accepted) expect(booted.sent[0]).toContain(`- \`${id}\`: `);
+  });
+
+  it("queues the request as a follow-up while the agent works", async () => {
+    const booted = await boot();
+    booted.ctx.idle = false;
+    await run(booted, "minimal");
+    expect(booted.sent[0]).toMatch(/^\[followUp\] Design my pi statusline/);
+  });
+
+  it("does not treat a subcommand as a description", async () => {
+    const booted = await boot();
+    for (const sub of ["on", "off", "reset"]) await run(booted, sub);
+    expect(booted.sent).toEqual([]);
+  });
+});

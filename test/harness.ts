@@ -54,7 +54,8 @@ export function fakePi() {
     },
     registerCommand: (name: string, options: never) => commands.set(name, options),
     registerTool: (tool: { name: string; execute: never }) => tools.set(tool.name, tool),
-    sendUserMessage: (content: string) => sent.push(content),
+    sendUserMessage: (content: string, options?: { deliverAs?: string }) =>
+      sent.push(options?.deliverAs ? `[${options.deliverAs}] ${content}` : content),
     getSettings: () => settings,
   } as unknown as ExtensionAPI;
   const emit = async (event: string, payload: object, ctx: unknown) => {
@@ -104,6 +105,8 @@ export function fakeCtx(options: CtxOptions) {
     cwd: options.cwd,
     mode: "tui",
     hasUI: true,
+    idle: true,
+    isIdle: () => ctx.idle,
     model: options.model,
     thinkingLevel: options.thinkingLevel,
     ui: {

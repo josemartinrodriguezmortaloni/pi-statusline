@@ -90,6 +90,19 @@ function segmentSchema(segment: Segment): TSchema {
   );
 }
 
+/** What the agent prompt says about each segment: the catalog entry and the JSON schema of its options. */
+export interface SegmentDoc {
+  id: string;
+  summary: string;
+  options: Record<string, unknown>;
+}
+
+export const SEGMENT_DOCS: readonly SegmentDoc[] = CATALOG.map((segment) => ({
+  id: segment.id,
+  summary: segment.summary,
+  options: segment.options,
+}));
+
 const SEGMENT_SCHEMAS = new Map(CATALOG.map((segment) => [segment.id, segmentSchema(segment)]));
 
 const SEGMENT_IDS = CATALOG.map((segment) => segment.id);
