@@ -6,6 +6,7 @@ import { anthropicAdapter } from "./anthropic.ts";
 import { codexAdapter } from "./codex.ts";
 import type { AdapterDeps, QuotaAdapter } from "./types.ts";
 
+export { RateLimited } from "./json.ts";
 export { createQuotaMonitor, type QuotaMonitor } from "./monitor.ts";
 export type { AdapterDeps, ProviderAuth, QuotaAdapter, QuotaWindow, QuotaWindowId } from "./types.ts";
 

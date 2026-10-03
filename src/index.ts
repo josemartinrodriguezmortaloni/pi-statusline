@@ -51,6 +51,7 @@ function openStore(path: string, ctx: ExtensionContext): ConfigStore {
 function startQuota(deps: StatuslineDeps, ctx: ExtensionContext, store: ConfigStore) {
   const quota = createQuotaMonitor(
     createAdapters({ fetch: deps.fetch, home: deps.home, registry: ctx.modelRegistry }),
+    deps.now,
   );
   const syncQuota = (current: ExtensionContext) =>
     quota.watch(quotaProviders(store.current(), current.model?.provider));

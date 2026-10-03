@@ -1,3 +1,4 @@
+import { RateLimited } from "./json.ts";
 import type { QuotaAdapter, QuotaWindow, QuotaWindowId } from "./types.ts";
 
 export interface QuotaMonitor {
@@ -20,10 +21,15 @@ function byProvider(adapters: readonly QuotaAdapter[]): ReadonlyMap<string, Quot
 
 /**
  * Polls only the watched providers. A failed fetch keeps the last windows, so the render never sees
- * the error.
+ * the error. A rate-limited provider is not asked again until its server says so.
  */
-export function createQuotaMonitor(adapters: readonly QuotaAdapter[]): QuotaMonitor {
+export function createQuotaMonitor(adapters: readonly QuotaAdapter[], now: () => number): QuotaMonitor {
   const adapterOf = byProvider(adapters);
+  const pausedUntil = new Map<string, number>();
+  const waiting = (provider: string) => now() < (pausedUntil.get(provider) ?? 0);
+  const pause = (provider: string, error: unknown) => {
+    if (error instanceof RateLimited) pausedUntil.set(provider, now() + error.retryAfterMs);
+  };
   const windows = new Map<string, QuotaWindow[]>();
   const inFlight = new Set<string>();
   const listeners = new Set<() => void>();
@@ -35,14 +41,14 @@ export function createQuotaMonitor(adapters: readonly QuotaAdapter[]): QuotaMoni
     for (const listener of listeners) listener();
   };
   const poll = (provider: string) => {
-    if (inFlight.has(provider)) return;
+    if (inFlight.has(provider) || waiting(provider)) return;
     inFlight.add(provider);
     const signal = AbortSignal.any([stop.signal, AbortSignal.timeout(TIMEOUT_MS)]);
     (adapterOf.get(provider) as QuotaAdapter)
       .fetch(provider, signal)
       .then(
         (fetched) => store(provider, fetched),
-        () => {},
+        (error) => pause(provider, error),
       )
       .finally(() => inFlight.delete(provider));
   };

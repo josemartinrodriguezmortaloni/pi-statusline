@@ -44,6 +44,7 @@ describe("usage with the OpenAI Codex adapter", () => {
         url: USAGE_URL,
         headers: {
           Accept: "application/json",
+          "User-Agent": "pi-statusline/0.1.0",
           Authorization: `Bearer ${token}`,
           "ChatGPT-Account-Id": "acct-pi",
         },

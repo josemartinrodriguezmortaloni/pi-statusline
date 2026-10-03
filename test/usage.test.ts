@@ -48,6 +48,7 @@ describe("usage with the Anthropic adapter", () => {
         url: USAGE_URL,
         headers: {
           Accept: "application/json",
+          "User-Agent": "pi-statusline/0.1.0",
           Authorization: `Bearer ${OAUTH}`,
           "anthropic-beta": "oauth-2025-04-20",
         },
@@ -165,5 +166,52 @@ describe("usage with the Anthropic adapter", () => {
     });
     const footer = mount();
     await vi.waitFor(() => expect(footer.render(80)[0]).toMatch(/^5h /));
+  });
+});
+
+describe("rate limit of the quota endpoint", () => {
+  async function limited(retryAfter: string | undefined) {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const clock = { now: 0 };
+    let limit = true;
+    const home = tempHome();
+    writeConfig(home, { lines: [{ left: [{ segment: "usage" }] }] });
+    writeJson(home, ".claude/.credentials.json", { claudeAiOauth: { accessToken: OAUTH } });
+    const headers = retryAfter === undefined ? undefined : { "Retry-After": retryAfter };
+    const fake = fakeFetch({
+      [USAGE_URL]: () => (limit ? new Response("slow down", { status: 429, headers }) : BODY),
+    });
+    const booted = await boot({ home, fetch: fake.fetch, model: CLAUDE_ACP, now: () => clock.now });
+    await vi.waitFor(() => expect(fake.calls).toHaveLength(1));
+    const tick = async (ms: number) => {
+      clock.now += ms;
+      vi.advanceTimersByTime(ms);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    };
+    return { ...booted, calls: fake.calls, tick, unlimit: () => (limit = false) };
+  }
+
+  it("waits for Retry-After before it asks again", async () => {
+    const { calls, tick, unlimit, mount } = await limited("150");
+    await tick(60_000);
+    await tick(60_000);
+    expect(calls).toHaveLength(1);
+    unlimit();
+    await tick(60_000);
+    expect(calls).toHaveLength(2);
+    await vi.waitFor(() => expect(mount().render(80)[0]).toMatch(/^5h /));
+  });
+
+  it("waits 5 minutes when the server gives no Retry-After", async () => {
+    const { calls, tick } = await limited(undefined);
+    for (let minute = 1; minute < 5; minute++) await tick(60_000);
+    expect(calls).toHaveLength(1);
+    await tick(60_000);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("sends a User-Agent that names the extension", async () => {
+    const { calls } = await limited("1");
+    expect(calls[0]?.headers["User-Agent"]).toMatch(/^pi-statusline\/\d+\.\d+\.\d+$/);
   });
 });
