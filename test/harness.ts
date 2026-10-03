@@ -92,6 +92,8 @@ export interface CtxOptions {
   contextUsage?: { tokens: number | null; contextWindow: number; percent: number | null };
   oauth?: boolean;
   startedAt?: string;
+  /** API key or OAuth token that pi resolves per provider. */
+  providerAuth?: Record<string, string>;
 }
 
 export function fakeCtx(options: CtxOptions) {
@@ -120,7 +122,13 @@ export function fakeCtx(options: CtxOptions) {
         return [...options.entries];
       },
     },
-    modelRegistry: { isUsingOAuth: () => options.oauth ?? false },
+    modelRegistry: {
+      isUsingOAuth: () => options.oauth ?? false,
+      getProviderAuth: async (provider: string) => {
+        const apiKey = options.providerAuth?.[provider];
+        return apiKey ? { auth: { apiKey } } : undefined;
+      },
+    },
     getContextUsage: () => options.contextUsage,
   };
   return { ctx, notified, footers, counters };
@@ -130,6 +138,31 @@ export function tempHome(): string {
   const home = mkdtempSync(join(tmpdir(), "pi-statusline-"));
   mkdirSync(join(home, ".pi", "agent"), { recursive: true });
   return home;
+}
+
+export function writeJson(home: string, path: string, value: unknown): void {
+  const file = join(home, path);
+  mkdirSync(join(file, ".."), { recursive: true });
+  writeFileSync(file, JSON.stringify(value));
+}
+
+export interface FetchCall {
+  url: string;
+  headers: Record<string, string>;
+}
+
+/** A fetch that answers each URL with its route, a body or an error, and records the requests. */
+export function fakeFetch(routes: Record<string, () => unknown>) {
+  const calls: FetchCall[] = [];
+  const fetcher = (async (input: string | URL, init?: RequestInit) => {
+    const url = String(input);
+    calls.push({ url, headers: { ...(init?.headers as Record<string, string>) } });
+    const route = routes[url];
+    if (!route) return new Response("not found", { status: 404 });
+    const body = route();
+    return body instanceof Response ? body : new Response(JSON.stringify(body), { status: 200 });
+  }) as typeof fetch;
+  return { fetch: fetcher, calls };
 }
 
 export function writeConfig(home: string, config: unknown): void {

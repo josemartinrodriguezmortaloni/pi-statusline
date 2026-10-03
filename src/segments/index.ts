@@ -7,6 +7,7 @@ import type { Segment } from "./segment.ts";
 import { cache, context, cost, tokens } from "./spend.ts";
 import { status, statuses } from "./statuses.ts";
 import { sessionTime, turnTime } from "./time.ts";
+import { usage } from "./usage.ts";
 
 export type { Fragment, RenderScope, Segment, Tone } from "./segment.ts";
 
@@ -24,6 +25,7 @@ export const CATALOG: readonly Segment[] = [
   turnTime,
   status,
   statuses,
+  usage,
 ];
 
 const BY_ID = new Map(CATALOG.map((segment) => [segment.id, segment]));

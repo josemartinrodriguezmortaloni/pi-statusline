@@ -9,6 +9,7 @@ export interface HostSources {
   home: string;
   now: () => number;
   autoCompact: () => boolean;
+  quota: Snapshot["quota"];
 }
 
 export interface Host {
@@ -95,6 +96,7 @@ export function createHost(sources: HostSources): Host {
       sessionStartedAt: sessionStartedAt(ctx),
       turn: turn.current(),
       now: sources.now(),
+      quota: sources.quota,
     }),
   };
 }

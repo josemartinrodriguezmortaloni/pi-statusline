@@ -1,4 +1,5 @@
 import type { ContextUsage } from "@earendil-works/pi-coding-agent";
+import type { QuotaWindow, QuotaWindowId } from "../quota/index.ts";
 
 export interface Tokens {
   input: number;
@@ -28,6 +29,8 @@ export interface Snapshot {
   sessionStartedAt?: number;
   turn: Turn;
   now: number;
+  /** Last known quota window of a provider. Nothing when the provider has no quota data. */
+  quota(provider: string, window: QuotaWindowId): QuotaWindow | undefined;
 }
 
 /** The agent turn in progress, or the duration of the last one. */

@@ -1,6 +1,11 @@
 import { defineConfig } from "vitest/config";
 
+// Reset dates follow the system locale. ICU reads the locale once at process start, so the config pins it
+// here, before vitest forks the test workers, together with the time zone.
+process.env.LC_ALL = "es_AR.UTF-8";
+process.env.LANG = "es_AR.UTF-8";
+process.env.TZ = "UTC";
+
 export default defineConfig({
-  // Reset dates follow the system locale; tests pin it and the time zone so their text does not depend on the machine.
-  test: { include: ["test/**/*.test.ts"], env: { LC_ALL: "", LANG: "es_AR.UTF-8", TZ: "UTC" } },
+  test: { include: ["test/**/*.test.ts"] },
 });

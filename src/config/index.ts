@@ -3,6 +3,7 @@
  * reads, validates, writes and watches `~/.pi/agent/statusline.json`.
  */
 export { PRESET } from "./preset.ts";
+export { quotaProviders } from "./quota.ts";
 export { describeIssues, type Issue, type Result } from "./schema.ts";
 export { type ChangeListener, type ConfigStore, configPath, openConfigStore } from "./store.ts";
 export type { Config, LineConfig, SegmentConfig } from "./types.ts";

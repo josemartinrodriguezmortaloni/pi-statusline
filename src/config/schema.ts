@@ -1,5 +1,6 @@
 import type { ThemeColor } from "@earendil-works/pi-coding-agent";
 import { type TSchema, Type } from "typebox";
+import type { TLocalizedValidationError } from "typebox/error";
 import { Value } from "typebox/value";
 import { CATALOG, type Segment } from "../segments/index.ts";
 import type { Config, SegmentConfig } from "./types.ts";
@@ -110,17 +111,20 @@ const SHAPE = Type.Object(
   { additionalProperties: false },
 );
 
-const MESSAGES: Record<string, (message: string) => string> = {
+const MESSAGES: Record<string, (error: TLocalizedValidationError) => string> = {
   pattern: () => COLOR_MESSAGE,
-  enum: () => `must be one of: ${SEGMENT_IDS.join(", ")}`,
+  enum: (error) =>
+    `must be one of: ${(error.params as { allowedValues: unknown[] }).allowedValues.join(", ")}`,
 };
+
+const messageOf = (error: TLocalizedValidationError) => MESSAGES[error.keyword]?.(error) ?? error.message;
 
 function issuesOf(schema: TSchema, value: unknown, prefix: string): Issue[] {
   const seen = new Set<string>();
   return Value.Errors(schema, value)
     .map((error) => ({
       path: prefix + error.instancePath,
-      message: (MESSAGES[error.keyword] ?? String)(error.message),
+      message: messageOf(error),
     }))
     .filter((issue) => !seen.has(issue.path) && seen.add(issue.path));
 }
