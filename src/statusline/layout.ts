@@ -37,9 +37,15 @@ export function groupWidth(placed: readonly Placed[], side: Side): number {
   return visibleWidth(texts.join(" "));
 }
 
+/** The gap separates two groups; a group alone needs none. */
+export function gapBetween(leftWidth: number, rightWidth: number): number {
+  return leftWidth > 0 && rightWidth > 0 ? GAP : 0;
+}
+
 export function lineWidth(placed: readonly Placed[]): number {
+  const left = groupWidth(placed, "left");
   const right = groupWidth(placed, "right");
-  return groupWidth(placed, "left") + (right > 0 ? GAP + right : 0);
+  return left + gapBetween(left, right) + right;
 }
 
 const priorityOf = (item: Placed) => item.spec.priority ?? 0;

@@ -10,6 +10,8 @@ import type { ApplyTarget } from "./tool.ts";
 interface Subcommand {
   description: string;
   done: string;
+  /** True when the subcommand keeps the rest of the config, so it must not replace a broken file. */
+  keepsConfig: boolean;
   run(store: ConfigStore): Result<Config>;
 }
 
@@ -17,16 +19,19 @@ const SUBCOMMANDS: Record<string, Subcommand> = {
   on: {
     description: "Show the statusline",
     done: "Statusline on.",
+    keepsConfig: true,
     run: (store) => store.apply({ ...store.current(), enabled: true }),
   },
   off: {
     description: "Restore the default pi footer",
     done: "Statusline off: pi shows its default footer.",
+    keepsConfig: true,
     run: (store) => store.apply({ ...store.current(), enabled: false }),
   },
   reset: {
     description: "Replace the config with the preset",
     done: "Statusline reset to the preset.",
+    keepsConfig: false,
     run: (store) => store.apply(PRESET),
   },
 };
@@ -39,7 +44,18 @@ export const USAGE = [
   ),
 ].join("\n");
 
+/** Applying the last valid config over an invalid file would erase the user's edit. */
+function blocked(sub: Subcommand, store: ConfigStore): string | undefined {
+  if (!sub.keepsConfig || store.issues().length === 0) return undefined;
+  return `statusline.json is invalid; fix it or run /statusline reset first:\n${describeIssues(store.issues())}`;
+}
+
 function runSubcommand(sub: Subcommand, store: ConfigStore, ctx: ExtensionCommandContext): void {
+  const reason = blocked(sub, store);
+  if (reason) {
+    ctx.ui.notify(reason, "error");
+    return;
+  }
   const result = sub.run(store);
   if (result.ok) ctx.ui.notify(sub.done, "info");
   else ctx.ui.notify(`statusline: ${describeIssues(result.issues)}`, "error");
@@ -62,7 +78,7 @@ export function statuslineCommand(
   target: () => ApplyTarget | undefined,
 ): Omit<RegisteredCommand, "name" | "sourceInfo"> {
   const route = (args: string, ctx: ExtensionCommandContext, current: ApplyTarget) => {
-    const sub = SUBCOMMANDS[args];
+    const sub = Object.hasOwn(SUBCOMMANDS, args) ? SUBCOMMANDS[args] : undefined;
     if (sub) runSubcommand(sub, current.store, ctx);
     else requestDesign(pi, args, current, ctx);
   };

@@ -29,6 +29,8 @@ export function designPrompt(input: PromptInput): string {
     "",
     "{ enabled?: boolean, lines: [{ left: [segment, ...], right: [segment, ...] }, ...] }",
     "",
+    "- Set `enabled` to true, so I see the result, unless the description asks to turn the statusline off.",
+    "",
     "- Each line renders the `left` group, then the `right` group aligned to the right edge.",
     "- A line whose segments all have nothing to show is left out.",
     "- Each segment is an object: { segment: <id>, priority?, color?, ...its options }.",

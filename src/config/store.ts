@@ -1,4 +1,4 @@
-import { type FSWatcher, mkdirSync, readFileSync, renameSync, watch, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, renameSync, watch, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { PRESET } from "./preset.ts";
 import { type Issue, type Result, validate } from "./schema.ts";
@@ -8,6 +8,8 @@ export type ChangeListener = (config: Config, issues: readonly Issue[]) => void;
 
 export interface ConfigStore {
   current(): Config;
+  /** What fails in the file on disk now. Empty while the file is valid or missing. */
+  issues(): readonly Issue[];
   /** Validates the config and, only when it is valid, writes it atomically. */
   apply(raw: unknown): Result<Config>;
   /** Called after each reload. Issues mean the file is invalid and the last valid config stays. */
@@ -49,39 +51,69 @@ function writeAtomic(path: string, text: string): void {
   renameSync(temporary, path);
 }
 
+/** The file behind a symlink, so a write keeps the link and the watch sees edits of the target. */
+function realTarget(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
+  }
+}
+
 /**
- * Opens the config file and watches its directory, because an atomic write replaces the file.
- * An invalid file at open falls back to the preset; the returned issues say why.
+ * Watches the directory, because an atomic write replaces the file. Without a watcher, for example
+ * at the inotify limit, the statusline still works and only hot reload stops.
  */
+function watchFile(path: string, onChange: () => void): () => void {
+  try {
+    const watcher = watch(dirname(path), (_event, file) => file === basename(path) && onChange());
+    watcher.on("error", () => watcher.close());
+    return () => watcher.close();
+  } catch {
+    return () => {};
+  }
+}
+
+/** An editor that truncates and then writes fires several events; only the last one reloads. */
+const SETTLE_MS = 50;
+
+/** Opens the config file. An invalid file at open falls back to the preset; `issues` says why. */
 export function openConfigStore(path: string): { store: ConfigStore; issues: readonly Issue[] } {
-  mkdirSync(dirname(path), { recursive: true });
+  const target = realTarget(path);
+  mkdirSync(dirname(target), { recursive: true });
   const listeners = new Set<ChangeListener>();
-  let text = readText(path);
+  let text = readText(target);
   const opened = parse(text);
   let config = opened.ok ? opened.value : PRESET;
+  let issues: readonly Issue[] = opened.ok ? [] : opened.issues;
 
-  const commit = (next: Config, issues: readonly Issue[]) => {
+  const commit = (next: Config, found: readonly Issue[]) => {
     config = next;
+    issues = found;
     for (const listener of listeners) listener(config, issues);
   };
   const settle = (result: Result<Config>) =>
     result.ok ? commit(result.value, []) : commit(config, result.issues);
   const reload = () => {
-    const next = readText(path);
+    const next = readText(target);
     if (next === text) return;
     text = next;
     settle(parse(text));
   };
-  const watcher: FSWatcher = watch(dirname(path), (_event, file) => file === basename(path) && reload());
-  watcher.on("error", () => watcher.close());
+  let pending: NodeJS.Timeout | undefined;
+  const stopWatch = watchFile(target, () => {
+    clearTimeout(pending);
+    pending = setTimeout(reload, SETTLE_MS);
+  });
 
   const store: ConfigStore = {
     current: () => config,
+    issues: () => issues,
     apply: (raw) => {
       const result = validate(raw);
       if (!result.ok) return result;
       text = `${JSON.stringify(result.value, null, 2)}\n`;
-      writeAtomic(path, text);
+      writeAtomic(target, text);
       commit(result.value, []);
       return result;
     },
@@ -90,9 +122,10 @@ export function openConfigStore(path: string): { store: ConfigStore; issues: rea
       return () => listeners.delete(listener);
     },
     dispose: () => {
-      watcher.close();
+      clearTimeout(pending);
+      stopWatch();
       listeners.clear();
     },
   };
-  return { store, issues: opened.ok ? [] : opened.issues };
+  return { store, issues };
 }

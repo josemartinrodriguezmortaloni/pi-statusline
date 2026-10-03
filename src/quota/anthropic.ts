@@ -24,7 +24,9 @@ function extra(value: unknown): QuotaWindow[] {
   return [{ id: "extra", usedPercent: number(json.utilization) ?? 0, spent }];
 }
 
-export function parseAnthropic(body: Json): QuotaWindow[] {
+/** No body means a rejected credential: no windows, so the segment hides. */
+export function parseAnthropic(body: Json | undefined): QuotaWindow[] {
+  if (!body) return [];
   return [...window("5h", body.five_hour), ...window("7d", body.seven_day), ...extra(body.extra_usage)];
 }
 

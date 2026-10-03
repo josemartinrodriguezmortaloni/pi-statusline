@@ -14,11 +14,18 @@ export const status = defineSegment({
 
 export const statuses = defineSegment({
   id: "statuses",
-  summary: "Statuses of other extensions, sorted by key, except the keys that status segments show.",
-  options: {},
-  render: (snapshot, _options, scope) => {
+  summary:
+    "Statuses of other extensions, sorted by key, except the keys that status segments show and the excluded keys.",
+  options: {
+    exclude: Type.Array(Type.String(), {
+      default: [],
+      description: "Status keys to hide, for example engram.",
+    }),
+  },
+  render: (snapshot, { exclude }, scope) => {
+    const hidden = new Set([...scope.claimedStatusKeys, ...exclude]);
     const shown = [...snapshot.statuses]
-      .filter(([key]) => !scope.claimedStatusKeys.has(key))
+      .filter(([key]) => !hidden.has(key))
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([, text]) => singleLine(text));
     const text = joinParts(shown);

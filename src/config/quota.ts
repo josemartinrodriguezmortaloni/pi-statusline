@@ -1,7 +1,11 @@
 import type { Config } from "./types.ts";
 
-/** Providers whose quota the config shows: the fixed ids, and the active provider where a segment follows it. */
+/**
+ * Providers whose quota the config shows: the fixed ids, and the active provider where a segment follows
+ * it. None while the statusline is off.
+ */
 export function quotaProviders(config: Config, activeProvider: string | undefined): ReadonlySet<string> {
+  if (!config.enabled) return new Set();
   const chosen = config.lines
     .flatMap((line) => [...line.left, ...line.right])
     .filter((spec) => spec.segment === "usage")

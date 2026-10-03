@@ -3,7 +3,7 @@ import type { Snapshot } from "../host/index.ts";
 import { findSegment, type RenderScope } from "../segments/index.ts";
 import {
   fitToWidth,
-  GAP,
+  gapBetween,
   groupWidth,
   type Layout,
   type LineSpec,
@@ -52,9 +52,10 @@ function paintGroup(placed: readonly Placed[], side: Side, theme: Painter): stri
 /** Left group, then the right group aligned to the right edge. */
 function compose(shown: readonly Placed[], frame: Frame): string {
   const left = paintGroup(shown, "left", frame.theme);
+  const leftWidth = groupWidth(shown, "left");
   const rightWidth = groupWidth(shown, "right");
   if (rightWidth === 0) return left;
-  const padding = Math.max(GAP, frame.width - groupWidth(shown, "left") - rightWidth);
+  const padding = Math.max(gapBetween(leftWidth, rightWidth), frame.width - leftWidth - rightWidth);
   return left + " ".repeat(padding) + paintGroup(shown, "right", frame.theme);
 }
 

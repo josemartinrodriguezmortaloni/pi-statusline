@@ -1,7 +1,8 @@
+import { validate } from "./schema.ts";
 import type { Config } from "./types.ts";
 
 /** Reproduces the three lines of the default pi footer. Higher priorities stay longer on a narrow terminal. */
-export const PRESET: Config = {
+const DEFINITION: Config = {
   enabled: true,
   lines: [
     {
@@ -27,3 +28,6 @@ export const PRESET: Config = {
     { left: [{ segment: "statuses" }], right: [] },
   ],
 };
+
+/** The preset passes through the schema like any config, so it carries the option defaults. */
+export const PRESET = (validate(DEFINITION) as { value: Config }).value;

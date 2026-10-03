@@ -57,7 +57,7 @@ The config is global: `~/.pi/agent/statusline.json`. Pi applies a saved edit at 
       "left": [
         { "segment": "usage", "window": "5h", "thresholds": { "warning": 80 } },
         { "segment": "status", "key": "mcp" },
-        { "segment": "statuses" }
+        { "segment": "statuses", "exclude": ["engram"] }
       ],
       "right": [{ "segment": "session-time" }]
     }
@@ -77,7 +77,7 @@ The config is global: `~/.pi/agent/statusline.json`. Pi applies a saved edit at 
 | `tokens`, `cache`, `cost`, `context` | Session tokens, prompt cache, cost and context window use. |
 | `model`, `thinking` | Provider and model, and the thinking level. |
 | `session-time`, `turn-time` | Time since the session started, and the duration of the current or last agent turn. |
-| `status { key }`, `statuses` | The status of one extension, and the statuses of the extensions not shown by `status`. |
+| `status { key }`, `statuses { exclude }` | The status of one extension, and the statuses not shown by `status` and not in `exclude`. |
 | `usage { provider, window, thresholds }` | Subscription quota: `5h`, `7d` or `extra`. |
 
 `usage` reads the quota of the provider of the active model (`"provider": "active"`, the default) or of a fixed provider. It turns to warning at 50 % and to error at 90 % unless `thresholds` says otherwise. The extension polls each provider that the config needs every 60 s.

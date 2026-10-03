@@ -32,7 +32,9 @@ function window(value: unknown): QuotaWindow[] {
   return [{ id, usedPercent, resetsAt: epochMs(json.reset_at) }];
 }
 
-export function parseCodex(body: Json): QuotaWindow[] {
+/** No body means a rejected credential: no windows, so the segment hides. */
+export function parseCodex(body: Json | undefined): QuotaWindow[] {
+  if (!body) return [];
   const limits = object(body.rate_limit);
   return [...window(limits.primary_window), ...window(limits.secondary_window)];
 }

@@ -23,14 +23,21 @@ export async function readJson(path: string): Promise<Json> {
   }
 }
 
-/** GETs JSON and rejects on any status other than 2xx. */
+/** The server refused the credential: it expired or was revoked. */
+const REJECTED = new Set([401, 403]);
+
+/**
+ * GETs JSON. Resolves nothing when the server rejects the credential, and rejects on any other
+ * failure, which is transient.
+ */
 export async function getJson(
   fetcher: typeof fetch,
   url: string,
   headers: Record<string, string>,
   signal: AbortSignal,
-): Promise<Json> {
+): Promise<Json | undefined> {
   const response = await fetcher(url, { headers: { Accept: "application/json", ...headers }, signal });
+  if (REJECTED.has(response.status)) return undefined;
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return object(await response.json());
 }
