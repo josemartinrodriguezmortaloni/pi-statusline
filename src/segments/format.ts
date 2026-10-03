@@ -30,3 +30,10 @@ export function joinParts(parts: readonly (string | false)[]): string | undefine
   const shown = parts.filter((part): part is string => Boolean(part));
   return shown.length > 0 ? shown.join(" ") : undefined;
 }
+
+/** `45s` under a minute, `12m` under an hour, `1h2m` after. */
+export function formatDuration(ms: number): string {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000);
+  if (minutes >= 60) return `${Math.floor(minutes / 60)}h${minutes % 60}m`;
+  return minutes >= 1 ? `${minutes}m` : `${Math.floor(Math.max(0, ms) / 1000)}s`;
+}

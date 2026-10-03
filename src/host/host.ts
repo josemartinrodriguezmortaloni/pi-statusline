@@ -2,6 +2,7 @@ import { isAbsolute, relative, sep } from "node:path";
 import type { ExtensionContext, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import type { Snapshot, Tokens } from "./snapshot.ts";
 import { sumTokens } from "./tokens.ts";
+import { createTurnClock } from "./turn.ts";
 
 export interface HostSources {
   ctx: ExtensionContext;
@@ -13,6 +14,8 @@ export interface HostSources {
 export interface Host {
   /** Reads pi now. `footerData` is absent where pi shows no footer, as in RPC mode. */
   snapshot(footerData?: ReadonlyFooterDataProvider): Snapshot;
+  turnStarted(): void;
+  turnEnded(): void;
 }
 
 type FooterFacts = Pick<Snapshot, "gitBranch" | "statuses">;
@@ -44,6 +47,13 @@ function model(ctx: ExtensionContext): Snapshot["model"] {
   return ctx.model && { provider: ctx.model.provider, id: ctx.model.id };
 }
 
+const headerTimestamp = (ctx: ExtensionContext) => ctx.sessionManager.getHeader()?.timestamp ?? "";
+
+function sessionStartedAt(ctx: ExtensionContext): number | undefined {
+  const started = Date.parse(headerTimestamp(ctx));
+  return Number.isNaN(started) ? undefined : started;
+}
+
 function subscription(ctx: ExtensionContext): boolean {
   return ctx.model ? ctx.modelRegistry.isUsingOAuth(ctx.model) : false;
 }
@@ -68,7 +78,10 @@ function memoizedTokens(ctx: ExtensionContext): () => Tokens {
 export function createHost(sources: HostSources): Host {
   const { ctx } = sources;
   const tokens = memoizedTokens(ctx);
+  const turn = createTurnClock(sources.now);
   return {
+    turnStarted: turn.start,
+    turnEnded: turn.end,
     snapshot: (footerData) => ({
       cwd: formatCwd(ctx.sessionManager.getCwd(), sources.home),
       ...footerFacts(footerData),
@@ -79,6 +92,8 @@ export function createHost(sources: HostSources): Host {
       autoCompact: sources.autoCompact(),
       model: model(ctx),
       thinking: thinking(ctx),
+      sessionStartedAt: sessionStartedAt(ctx),
+      turn: turn.current(),
       now: sources.now(),
     }),
   };

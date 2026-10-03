@@ -20,6 +20,8 @@ export interface Segment {
   summary: string;
   /** Typebox properties of the options the segment accepts besides `priority` and `color`. */
   options: TProperties;
+  /** True when the text changes with time alone, so the footer re-renders every second. */
+  clock?: boolean;
   /** Returns nothing when the segment has no data to show. */
   render(snapshot: Snapshot, options: Record<string, unknown>, scope: RenderScope): Fragment | undefined;
 }
@@ -28,6 +30,7 @@ interface TypedSegment<Options extends TProperties> {
   id: string;
   summary: string;
   options: Options;
+  clock?: boolean;
   render(snapshot: Snapshot, options: Static<TObject<Options>>, scope: RenderScope): Fragment | undefined;
 }
 

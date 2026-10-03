@@ -10,7 +10,7 @@ export const PRESET: Config = {
         { segment: "git-branch", color: "dim", priority: 8 },
         { segment: "session-name", color: "dim", priority: 6 },
       ],
-      right: [],
+      right: [{ segment: "session-time", color: "dim", priority: 3 }],
     },
     {
       left: [

@@ -5,7 +5,8 @@ import { cwd, gitBranch, sessionName } from "./location.ts";
 import { model, thinking } from "./model.ts";
 import type { Segment } from "./segment.ts";
 import { cache, context, cost, tokens } from "./spend.ts";
-import { statuses } from "./statuses.ts";
+import { status, statuses } from "./statuses.ts";
+import { sessionTime, turnTime } from "./time.ts";
 
 export type { Fragment, RenderScope, Segment, Tone } from "./segment.ts";
 
@@ -19,6 +20,9 @@ export const CATALOG: readonly Segment[] = [
   context,
   model,
   thinking,
+  sessionTime,
+  turnTime,
+  status,
   statuses,
 ];
 

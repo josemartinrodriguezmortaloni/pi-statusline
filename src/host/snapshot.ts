@@ -24,5 +24,14 @@ export interface Snapshot {
   /** Thinking level, only when the model reasons. */
   thinking?: string;
   statuses: ReadonlyMap<string, string>;
+  /** Epoch ms of the session header, the first entry of the session file. */
+  sessionStartedAt?: number;
+  turn: Turn;
   now: number;
+}
+
+/** The agent turn in progress, or the duration of the last one. */
+export interface Turn {
+  startedAt?: number;
+  lastMs?: number;
 }

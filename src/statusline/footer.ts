@@ -1,6 +1,7 @@
 import type { ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
 import type { Snapshot } from "../host/index.ts";
+import { findSegment } from "../segments/index.ts";
 import type { Layout } from "./layout.ts";
 import type { Painter } from "./paint.ts";
 import { renderStatusline } from "./render.ts";
@@ -15,6 +16,19 @@ export interface FooterSources {
   changes: readonly Subscribe[];
 }
 
+const TICK_MS = 1000;
+
+function usesClock(layout: Layout): boolean {
+  const specs = layout.lines.flatMap((line) => [...line.left, ...line.right]);
+  return specs.some((spec) => findSegment(spec.segment)?.clock === true);
+}
+
+/** Re-renders every second while the layout shows a segment that changes with time alone. */
+function tick(layout: () => Layout, rerender: () => void): () => void {
+  const timer = setInterval(() => usesClock(layout()) && rerender(), TICK_MS);
+  return () => clearInterval(timer);
+}
+
 /** The footer component that pi mounts. It renders from live data on every frame. */
 export function createFooter(
   tui: { requestRender(): void },
@@ -26,6 +40,7 @@ export function createFooter(
   const stops = [
     footerData.onBranchChange(rerender),
     ...sources.changes.map((subscribe) => subscribe(rerender)),
+    tick(sources.layout, rerender),
   ];
   return {
     render: (width) => renderStatusline(sources.layout(), sources.snapshot(footerData), theme, width),

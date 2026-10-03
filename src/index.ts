@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { type ConfigStore, configPath, describeIssues, type Issue, openConfigStore } from "./config/index.ts";
-import { createHost } from "./host/index.ts";
+import { createHost, type Host } from "./host/index.ts";
 import { createFooter } from "./statusline/index.ts";
 
 /** What the extension reads from outside pi. Tests inject each one. */
@@ -11,12 +11,17 @@ export interface StatuslineDeps {
   now: () => number;
 }
 
+interface Session {
+  store: ConfigStore;
+  host: Host;
+}
+
 function warn(ctx: ExtensionContext, fallback: string, issues: readonly Issue[]): void {
   if (issues.length > 0)
     ctx.ui.notify(`statusline.json is invalid, ${fallback}:\n${describeIssues(issues)}`, "warning");
 }
 
-function startSession(pi: ExtensionAPI, deps: StatuslineDeps, ctx: ExtensionContext): ConfigStore {
+function startSession(pi: ExtensionAPI, deps: StatuslineDeps, ctx: ExtensionContext): Session {
   const { store, issues } = openConfigStore(configPath(deps.home));
   warn(ctx, "using the preset", issues);
   store.onChange((_config, issues) => warn(ctx, "keeping the last valid config", issues));
@@ -33,20 +38,22 @@ function startSession(pi: ExtensionAPI, deps: StatuslineDeps, ctx: ExtensionCont
       changes: [store.onChange],
     }),
   );
-  return store;
+  return { store, host };
 }
 
 /** Wires pi events to the modules. It holds no logic of its own. */
 export function registerStatusline(pi: ExtensionAPI, deps: StatuslineDeps): void {
-  let session: ConfigStore | undefined;
+  let session: Session | undefined;
   pi.on("session_start", (_event, ctx) => {
-    session?.dispose();
+    session?.store.dispose();
     session = startSession(pi, deps, ctx);
   });
   pi.on("session_shutdown", () => {
-    session?.dispose();
+    session?.store.dispose();
     session = undefined;
   });
+  pi.on("agent_start", () => session?.host.turnStarted());
+  pi.on("agent_end", () => session?.host.turnEnded());
 }
 
 export default function statusline(pi: ExtensionAPI): void {
