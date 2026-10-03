@@ -4,4 +4,5 @@
 export { createFooter, type FooterFactory, type FooterSources, footerSwitch } from "./footer.ts";
 export type { Layout, LineSpec, SegmentSpec } from "./layout.ts";
 export type { Painter } from "./paint.ts";
+export { createViewport, previewStatusline, type Viewport } from "./preview.ts";
 export { renderStatusline } from "./render.ts";

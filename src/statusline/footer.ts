@@ -4,6 +4,7 @@ import type { Snapshot } from "../host/index.ts";
 import { findSegment } from "../segments/index.ts";
 import type { Layout } from "./layout.ts";
 import type { Painter } from "./paint.ts";
+import type { Viewport } from "./preview.ts";
 import { renderStatusline } from "./render.ts";
 
 /** Subscribes a listener to a source of change and returns the unsubscribe. */
@@ -14,6 +15,8 @@ export interface FooterSources {
   layout(): Layout;
   /** Changes that pi does not know about and that need a new frame, such as a config reload. */
   changes: readonly Subscribe[];
+  /** Updated on every frame, so a preview renders at the width the user sees. */
+  viewport: Viewport;
 }
 
 const TICK_MS = 1000;
@@ -43,7 +46,11 @@ export function createFooter(
     tick(sources.layout, rerender),
   ];
   return {
-    render: (width) => renderStatusline(sources.layout(), sources.snapshot(footerData), theme, width),
+    render: (width) => {
+      sources.viewport.width = width;
+      sources.viewport.footerData = footerData;
+      return renderStatusline(sources.layout(), sources.snapshot(footerData), theme, width);
+    },
     invalidate: () => {},
     dispose: () => {
       for (const stop of stops) stop();
