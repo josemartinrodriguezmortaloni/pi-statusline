@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { afterEach } from "vitest";
 import { registerStatusline } from "../src/index.ts";
 
 type Handler = (event: unknown, ctx: unknown) => unknown;
@@ -141,6 +142,13 @@ export interface BootOptions extends Partial<CtxOptions> {
   fetch?: typeof fetch;
 }
 
+const shutdowns: (() => Promise<void>)[] = [];
+
+// Each boot opens a file watcher; closing the session closes it.
+afterEach(async () => {
+  for (const shutdown of shutdowns.splice(0)) await shutdown();
+});
+
 /** Registers the extension, starts a session and mounts the footer it sets. */
 export async function boot(options: BootOptions = {}) {
   const home = options.home ?? tempHome();
@@ -149,6 +157,7 @@ export async function boot(options: BootOptions = {}) {
   registerStatusline(fake.pi, { home, fetch: fetchFake, now: options.now ?? (() => 0) });
   const session = fakeCtx({ cwd: join(home, "proj"), entries: [], ...options });
   await fake.emit("session_start", { reason: "startup" }, session.ctx);
+  shutdowns.push(() => fake.emit("session_shutdown", {}, session.ctx));
   const tui = { renders: 0, requestRender: () => tui.renders++ };
   const footerData = fakeFooterData();
   const mount = (theme: object = plainTheme) => {

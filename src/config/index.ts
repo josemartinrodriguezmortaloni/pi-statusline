@@ -1,5 +1,8 @@
 /**
- * The statusline config: its shape and the preset that applies without a config file.
+ * The statusline config: the schema derived from the segment catalog, the preset, and the store that
+ * reads, validates, writes and watches `~/.pi/agent/statusline.json`.
  */
 export { PRESET } from "./preset.ts";
+export { describeIssues, type Issue, type Result } from "./schema.ts";
+export { type ChangeListener, type ConfigStore, configPath, openConfigStore } from "./store.ts";
 export type { Config, LineConfig, SegmentConfig } from "./types.ts";
